@@ -84,6 +84,26 @@ export default function CRA({ collaborateur }) {
     try {
       await supabase.from('cra').update({ statut: 'soumis', updated_at: new Date().toISOString() }).eq('id', craId || '')
       setStatut('soumis')
+
+      // Send email notification with CRA details
+      const totalT = Object.values(jours).filter(j => j.type === 'travaille').length
+      const totalDemi = Object.values(jours).filter(j => j.type === 'demi').length * 0.5
+      const totalAbs = Object.values(jours).filter(j => ['conge','rtt','maladie'].includes(j.type)).length
+      try {
+        await fetch('/api/submit-cra', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            collaborateur,
+            mois, annee, jours,
+            total_jours_travailles: totalT + totalDemi,
+            total_jours_absence: totalAbs,
+            commentaire
+          })
+        })
+      } catch (emailErr) { console.error('Email error:', emailErr) }
+
+      alert('CRA soumis avec succès ! Un email a été envoyé au manager.')
     } catch (err) { alert('Erreur: ' + err.message) }
     finally { setSaving(false) }
   }
